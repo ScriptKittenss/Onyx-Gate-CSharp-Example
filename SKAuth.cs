@@ -115,6 +115,20 @@ namespace OnyxGateExample
         public async Task<JsonElement> Redeem(string username, string licenseKey)
             => await Post("/sdk/redeem", new { appId = _appId, username, licenseKey });
 
+        // ── GetVar — fetch a server-side variable by name ─────────────────────
+        public async Task<string?> GetVar(string name)
+        {
+            try
+            {
+                var res = await _http.GetAsync(
+                    $"{BASE}/sdk/variable?appId={_appId}&name={name}");
+                var doc = JsonDocument.Parse(await res.Content.ReadAsStringAsync());
+                return doc.RootElement.TryGetProperty("value", out var v)
+                    ? v.GetString() : null;
+            }
+            catch { return null; }
+        }
+
         // ── Helpers ───────────────────────────────────────────────────────────
         public string GetUsername()
             => User?.GetProperty("username").GetString() ?? "";
