@@ -1,119 +1,71 @@
 <div align="center">
 
-# ⚡ Onyx Gate — C# WinForms Example
+# Onyx Gate — C# SDK Example
 
-[![Language](https://img.shields.io/badge/Language-C%23%2012-239120?style=for-the-badge&logo=csharp&logoColor=white)](https://dotnet.microsoft.com)
-[![Framework](https://img.shields.io/badge/Framework-.NET%208.0-512BD4?style=for-the-badge&logo=dotnet&logoColor=white)](https://dotnet.microsoft.com/download)
-[![UI](https://img.shields.io/badge/UI-Windows%20Forms-0078D6?style=for-the-badge&logo=windows&logoColor=white)](https://learn.microsoft.com/dotnet/desktop/winforms)
-[![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)](LICENSE)
-
-<br/>
-
-**A modern, asynchronous C# Windows Forms authentication client and SDK for [Onyx Gate](https://auth.script-kittens.com).**
+**A C# .NET 8 SDK for [Onyx Gate](https://auth.script-kittens.com). Async, no heavy dependencies.**
 
 </div>
 
 ---
 
-## 🚀 Overview
+## Files
 
-This example provides a complete GUI client implementing asynchronous login, registration, key redemption, and session validation using the modern .NET 8 SDK and Windows Forms.
+| File | What it is |
+| :--- | :--- |
+| `SKAuth.cs` | Drop-in SDK class — add it to any .NET 8 Windows project |
 
-### ✨ Features
-- ⚡ **Asynchronous Flow** — Non-blocking UI operations (`async` / `await` with `HttpClient`).
-- 🛡️ **HWID Hardware Fingerprinting** — Built-in Windows WMI / registry hardware profiling.
-- 📦 **Zero External Dependencies** — Built with native .NET 8 runtime features without heavy third-party packages.
-- 🎨 **Clean WinForms UI** — Pre-built `LoginForm` and feature dashboard `MainForm`.
+Requires the `System.Management` NuGet package (for the HWID).
 
----
+## Quick start
 
-## 📂 Project Structure
-
-```text
-├── SKAuth.cs               # Drop-in Onyx Gate SDK for C#
-├── LoginForm.cs            # Login & Register UI Form
-├── MainForm.cs             # Authenticated Dashboard / Feature Menu
-├── Program.cs              # Application Entry Point
-├── OnyxGate-CSharp.sln     # Visual Studio Solution
-└── OnyxGate-CSharp.csproj  # .NET 8 Project File
+```bash
+git clone https://github.com/ScriptKittenss/Onyx-Gate-CSharp-Example.git
 ```
 
----
+Add `SKAuth.cs` to your project, install `System.Management`, then:
 
-## ⚡ Quick Start
-
-### 1. Requirements
-- [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0)
-- Visual Studio 2022 (with *.NET desktop development* workload)
-
-### 2. Setup
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/fegrial/Onyx-Gate-CSharp-Example.git
-   ```
-2. Open `OnyxGate-CSharp.sln` in Visual Studio 2022.
-3. In `LoginForm.cs`, configure your `APP_ID`:
-   ```csharp
-   private readonly string APP_ID = "YOUR_APP_ID_HERE";
-   ```
-4. Build in **Release | Any CPU** and launch!
-
----
-
-## 💻 Code Integration
-
-Add Onyx Gate to any existing C# application in 3 steps:
-
-### 1. Initialize Auth Client
 ```csharp
-using OnyxGate;
+var auth = new SKAuth("YOUR_APP_ID", "1.0");
 
-public class App {
-    private readonly SKAuth auth = new SKAuth("YOUR_APP_ID", "1.0");
+var res = await auth.Login("username", "password");
+if (!res.GetProperty("ok").GetBoolean())
+{
+    MessageBox.Show(res.GetProperty("message").GetString());
+    return;
+}
+
+MessageBox.Show($"Welcome {auth.GetUsername()}! Plan: {auth.GetPlan()}");
+
+if (auth.IsPaid())
+{
+    // unlock premium features
 }
 ```
 
-### 2. Authenticate User
-```csharp
-var response = await auth.Login("username", "password");
-
-if (response.GetProperty("ok").GetBoolean()) {
-    string plan = response.GetProperty("data").GetProperty("plan").GetString();
-    Console.WriteLine($"Welcome! Active plan: {plan}");
-    
-    // Check subscription gate
-    if (auth.IsPaid()) {
-        ShowPaidFeatures();
-    }
-} else {
-    string error = response.GetProperty("message").GetString();
-    MessageBox.Show(error, "Authentication Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-}
-```
-
-### 3. Key Activation
-```csharp
-var result = await auth.RedeemKey("ONYX-XXXX-XXXX-XXXX");
-if (result.GetProperty("ok").GetBoolean()) {
-    MessageBox.Show("License key successfully redeemed!");
-}
-```
-
----
-
-## 🛡️ API Reference
+## API reference
 
 | Method | Description |
 | :--- | :--- |
-| `SKAuth(appId, version)` | Creates an auth client instance. |
-| `Task<JsonElement> Login(user, pass)` | Logs in user and validates HWID. |
-| `Task<JsonElement> Register(user, pass, email, key)` | Creates a new user profile. |
-| `Task<JsonElement> RedeemKey(key)` | Redeems license key to activate plan. |
-| `bool IsPaid()` | Returns `true` if current user has an active paid plan. |
-| `string GetHWID()` | Computes machine hardware ID. |
+| `new SKAuth(appId, version = "1.0")` | Create the client. Computes the machine HWID. |
+| `Login(username, password)` | Authenticate. On success `User` holds `username`, `plan`, `expires`, `email`, `apiKey`. On failure show the `message` as-is. |
+| `Register(username, password, email = "", licenseKey = "")` | Create an account. `licenseKey` is optional. |
+| `Redeem(username, licenseKey)` | Apply a license key to an existing account. |
+| `Validate()` | Heartbeat — call every few minutes. Kicks banned/expired users, syncs plan changes. Needs a login first. |
+| `GetVar(name)` | Read a runtime variable (dashboard → Settings → Variables). Returns the value or `null`. |
+| `DownloadFile(fileId, savePath)` | Download a file from the Runtime Vault (dashboard → Files). Returns `true` on success. Needs a login first. |
+| `IsPaid()` | `true` when the plan isn't `free` (starter, pro, …). |
+| `GetHWID()` | The machine HWID (SHA256, 32 hex chars). Same machine gives the same HWID in the Python and C++ SDKs. |
+| `GetUsername()` / `GetPlan()` / `GetExpires()` | Shortcuts into `User`. |
+
+## Notes
+
+- The App ID is public. Never put your app secret, a password, or a license key in source code.
+- `version` must match the version set in your dashboard, or login returns "Update required".
+- Logins are rate limited (15/min per IP), registrations 5 per 5 minutes per IP.
+- Full endpoint docs: https://auth.script-kittens.com → Documentation.
 
 ---
 
 <div align="center">
-<sub>Powered by <b>Onyx Gate</b> • Maintained by <a href="https://github.com/fegrial">fegrial</a></sub>
+<sub>Powered by <b>Onyx Gate</b> • <a href="https://github.com/ScriptKittenss">ScriptKittenss</a></sub>
 </div>
