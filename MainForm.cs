@@ -1,7 +1,7 @@
 // ============================================================
 //  MainForm.cs  —  Opens after successful login
 //  _auth.GetUsername()  → logged-in username
-//  _auth.GetPlan()      → "free" / "paid" / "vip" / "lifetime"
+//  _auth.GetPlan()      → "free" / "starter" / "pro" (any non-free = paid)
 //  _auth.IsPaid()       → true if paid plan
 // ============================================================
 
